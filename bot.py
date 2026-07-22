@@ -172,9 +172,4 @@ async def handle_input(event):
             await event.respond(f'oibka {str(e)}')
         del pending_requests[sender]
 
-async def main():
-    await client.start()
-    await client.run_until_disconnected()
-
-if __name__ == '__main__':
-    asyncio.run(main())
+client.run_until_disconnected()
