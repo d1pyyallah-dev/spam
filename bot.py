@@ -156,7 +156,6 @@ async def handle_input(event):
     elif pending_requests[sender]['step'] == 'phone':
         phone = event.text.strip()
         username = pending_requests[sender]['username']
-        proxy = random.choice(proxy_list)
         try:
             for _ in range(20):
                 await client(SendConfirmPhoneCodeRequest(
@@ -178,4 +177,4 @@ async def main():
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    asyncio.run(main()    asyncio.run(main())
+    asyncio.run(main())
