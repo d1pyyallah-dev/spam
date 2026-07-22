@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import sqlite3
-import os
 from telethon import TelegramClient, events
 from telethon.tl.functions.account import SendConfirmPhoneCodeRequest
 from telethon.tl.types import CodeSettings
@@ -171,11 +170,6 @@ async def message_handler(event):
         finally:
             if get_user(user_id) and get_user(user_id)[4] == 'phone':
                 update_step(user_id, None)
-
-@client.on(events.Disconnect)
-async def on_disconnect():
-    logger.info('Disconnected, cleaning up')
-    conn.close()
 
 logger.info('Bot started')
 client.run_until_disconnected()
