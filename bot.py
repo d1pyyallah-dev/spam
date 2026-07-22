@@ -133,13 +133,22 @@ async def message_handler(event):
         return
     if event.text.startswith('/'):
         return
+
     sender = await event.get_sender()
     user_id = sender.id
     logger.info(f'Message from {user_id}: {event.text}')
+
     user = get_user(user_id)
     if user is None:
-        await event.respond('napishi /start dlya registracii')
+        add_or_update_user(user_id, status='pending', step=None)
+        await event.respond('zaregistrirovan, zhdi odobreniya')
+        username = sender.username if sender.username else str(user_id)
+        await client.send_message(ADMIN_ID, f'ziavka ot @{username}',
+                                  buttons=[[KeyboardButtonCallback('priniat', f'accept_{user_id}'),
+                                            KeyboardButtonCallback('otklonit', f'reject_{user_id}')]])
+        add_request(user_id, ADMIN_ID, 'sent')
         return
+
     status = user[3]
     if status == 'pending':
         await event.respond('zhdi odobreniya adminom')
@@ -155,6 +164,7 @@ async def message_handler(event):
     if step is None:
         await event.respond('napishi /start')
         return
+
     if step == 'username':
         username = event.text.strip()
         if not username.startswith('@') or len(username) < 2:
