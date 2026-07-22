@@ -113,7 +113,7 @@ proxy_list = [
 {'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.49.223','port':3129}
 ]
 
-client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
+client = TelegramClient('bot', api_id, api_hash)
 
 pending_requests = {}
 
