@@ -1,1 +1,3 @@
-telethon
+telethon==1.36.0
+cryptg
+python-socks[asyncio]
