@@ -72,12 +72,23 @@ async def start_handler(event):
     sender = await event.get_sender()
     user_id = sender.id
     user = get_user(user_id)
-    if user and user[3] == 'approved':
-        await event.respond('ty uzhe odobren pishi username s @')
-        update_step(user_id, 'username')
-        return
-    add_or_update_user(user_id, status='pending', step=None)
-    await event.respond('tvoia zaiavka otpravlena')
+    if user:
+        status = user[3]
+        if status == 'approved':
+            await event.respond('ty uzhe odobren pishi username s @')
+            update_step(user_id, 'username')
+            return
+        elif status == 'pending':
+            await event.respond('zayavka uzhe otpravlena, zhdi odobreniya')
+            return
+        elif status == 'rejected':
+            await event.respond('tebya otklonili, otpravlyayu novuyu zayavku')
+            update_status(user_id, 'pending')
+            update_step(user_id, None)
+    else:
+        add_or_update_user(user_id, status='pending', step=None)
+
+    await event.respond('tvoia zaiavka otpravlena, zhdi odobreniya')
     username = sender.username if sender.username else str(user_id)
     await client.send_message(ADMIN_ID, f'ziavka ot @{username}',
                               buttons=[[KeyboardButtonCallback('priniat', f'accept_{user_id}'),
@@ -126,17 +137,28 @@ async def message_handler(event):
     user_id = sender.id
     logger.info(f'Message from {user_id}: {event.text}')
     user = get_user(user_id)
-    if user is None or user[3] != 'approved':
-        await event.respond('ty ne odobren napishi /start')
+    if user is None:
+        await event.respond('napishi /start dlya registracii')
         return
+    status = user[3]
+    if status == 'pending':
+        await event.respond('zhdi odobreniya adminom')
+        return
+    if status == 'rejected':
+        await event.respond('ty otklonen, napishi /start dlya novoy zayavki')
+        return
+    if status != 'approved':
+        await event.respond('napishi /start')
+        return
+
     step = user[4]
     if step is None:
-        await event.respond('snachala napishi /start')
+        await event.respond('napishi /start')
         return
     if step == 'username':
         username = event.text.strip()
         if not username.startswith('@') or len(username) < 2:
-            await event.respond('pishi s @ i ne menee 2 simvolov debil')
+            await event.respond('pishi s @ i ne menee 2 simvolov')
             return
         add_or_update_user(user_id, username=username, step='phone')
         await event.respond('phone:')
