@@ -198,7 +198,9 @@ async def handle_input(event):
     sender = event.sender_id
     if sender == admin_id:
         return
+    logger.info(f'Message from {sender}: {event.text}')
     if sender not in pending_requests:
+        await event.respond('snachala napishi /start')
         return
     user_data = get_user(sender)
     if not user_data or user_data[3] != 'approved':
