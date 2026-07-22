@@ -3,7 +3,12 @@ from telethon import TelegramClient, events
 from telethon.tl.functions.account import SendConfirmPhoneCodeRequest
 from telethon.tl.types import CodeSettings
 from telethon.tl.types import KeyboardButtonCallback
+import sqlite3
 import random
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 api_id = 35911533
 api_hash = '11dafcdc1514796c867055023716d39a'
@@ -113,30 +118,80 @@ proxy_list = [
 {'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.49.223','port':3129}
 ]
 
+conn = sqlite3.connect('bot.db', check_same_thread=False)
+cursor = conn.cursor()
+cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+    user_id INTEGER PRIMARY KEY,
+    username TEXT,
+    phone TEXT,
+    status TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)''')
+cursor.execute('''CREATE TABLE IF NOT EXISTS requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    admin_id INTEGER,
+    action TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)''')
+conn.commit()
+
+def add_user(user_id, username=None, phone=None, status='pending'):
+    cursor.execute('INSERT OR REPLACE INTO users (user_id, username, phone, status) VALUES (?, ?, ?, ?)',
+                   (user_id, username, phone, status))
+    conn.commit()
+
+def update_user_status(user_id, status):
+    cursor.execute('UPDATE users SET status = ? WHERE user_id = ?', (status, user_id))
+    conn.commit()
+
+def get_user(user_id):
+    cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
+    return cursor.fetchone()
+
+def add_request(user_id, admin_id, action):
+    cursor.execute('INSERT INTO requests (user_id, admin_id, action) VALUES (?, ?, ?)',
+                   (user_id, admin_id, action))
+    conn.commit()
+
 client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
 pending_requests = {}
 
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
+    user_id = event.sender_id
+    existing = get_user(user_id)
+    if existing and existing[3] == 'approved':
+        await event.respond('ty uzhe odobren pishi username s @')
+        pending_requests[user_id] = {'step': 'username'}
+        return
+    add_user(user_id, status='pending')
     await event.respond('tvoia zaiavka otpravlena')
-    username = event.sender.username if event.sender.username else str(event.sender_id)
-    await client.send_message(admin_id, f'ziavka ot @{username}', 
-                              buttons=[[KeyboardButtonCallback('priniat', f'accept_{event.sender_id}'), 
-                                        KeyboardButtonCallback('otklonit', f'reject_{event.sender_id}')]])
+    username = event.sender.username if event.sender.username else str(user_id)
+    await client.send_message(admin_id, f'ziavka ot @{username}',
+                              buttons=[[KeyboardButtonCallback('priniat', f'accept_{user_id}'),
+                                        KeyboardButtonCallback('otklonit', f'reject_{user_id}')]])
+    add_request(user_id, admin_id, 'sent')
 
 @client.on(events.CallbackQuery)
 async def callback(event):
     data = event.data.decode()
     if data.startswith('accept_'):
         user_id = int(data.split('_')[1])
+        update_user_status(user_id, 'approved')
         pending_requests[user_id] = {'step': 'username'}
-        await client.send_message(user_id, 'pishi username s @')
+        await client.send_message(user_id, 'tebia odobrili pishi username s @')
         await event.answer('priniato')
+        add_request(user_id, admin_id, 'accepted')
+        logger.info(f'User {user_id} approved')
     elif data.startswith('reject_'):
         user_id = int(data.split('_')[1])
+        update_user_status(user_id, 'rejected')
         await client.send_message(user_id, 'otkloneno idi nahui')
         await event.answer('otkloneno')
+        add_request(user_id, admin_id, 'rejected')
+        logger.info(f'User {user_id} rejected')
 
 @client.on(events.NewMessage)
 async def handle_input(event):
@@ -145,6 +200,10 @@ async def handle_input(event):
         return
     if sender not in pending_requests:
         return
+    user_data = get_user(sender)
+    if not user_data or user_data[3] != 'approved':
+        await event.respond('ty ne odobren napishi /start')
+        return
     if pending_requests[sender]['step'] == 'username':
         username = event.text.strip()
         if not username.startswith('@'):
@@ -152,7 +211,9 @@ async def handle_input(event):
             return
         pending_requests[sender]['username'] = username
         pending_requests[sender]['step'] = 'phone'
+        add_user(sender, username=username, status='approved')
         await event.respond('phone:')
+        logger.info(f'User {sender} entered username {username}')
     elif pending_requests[sender]['step'] == 'phone':
         phone = event.text.strip()
         username = pending_requests[sender]['username']
@@ -168,8 +229,12 @@ async def handle_input(event):
                 ))
                 await asyncio.sleep(0.5)
             await event.respond('gatova tvoia mama sdohla')
+            add_user(sender, phone=phone, status='approved')
+            logger.info(f'Spam sent to {phone} for user {sender}')
         except Exception as e:
             await event.respond(f'oibka {str(e)}')
+            logger.error(f'Error for user {sender}: {e}')
         del pending_requests[sender]
 
+logger.info('Bot started')
 client.run_until_disconnected()
