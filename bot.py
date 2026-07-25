@@ -7,7 +7,7 @@ from telethon.errors import FloodWaitError
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 
 accounts = [
-    {'api_id': 35911533, 'api_hash': '11dafcdc1514796c867055023716d39a'}
+    {'api_id': 33180472, 'api_hash': '025b7581493ae0d83c3946f27a149057'}
 ]
 
 spam_tasks = {}
