@@ -7,17 +7,22 @@ API_ID = 35911533
 API_HASH = "11dafcdc1514796c867055023716d39a"
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 
-spam_data = {}
+spam_tasks = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Пришли номер телефона в формате +7XXXXXXXXXX для спама кодами.")
+    await update.message.reply_text("Отправь номер телефона в формате +7XXXXXXXXXX для спама кодами.")
 
 async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id in spam_data and not spam_data[chat_id]["task"].done():
-        spam_data[chat_id]["task"].cancel()
-        await spam_data[chat_id]["client"].disconnect()
-        del spam_data[chat_id]
+    if chat_id in spam_tasks:
+        task, client = spam_tasks.pop(chat_id)
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        await client.disconnect()
         await update.message.reply_text("Спам остановлен.")
     else:
         await update.message.reply_text("Нет активного спама.")
@@ -25,7 +30,7 @@ async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text.strip()
     chat_id = update.effective_chat.id
-    if chat_id in spam_data and not spam_data[chat_id]["task"].done():
+    if chat_id in spam_tasks:
         await update.message.reply_text("Уже идет спам для этого чата.")
         return
 
@@ -46,9 +51,10 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             await context.bot.send_message(chat_id, f"Ошибка: {e}")
             await client.disconnect()
+            spam_tasks.pop(chat_id, None)
 
     task = asyncio.create_task(spam())
-    spam_data[chat_id] = {"task": task, "client": client}
+    spam_tasks[chat_id] = (task, client)
     await update.message.reply_text("Запущен спам кодами. Для остановки отправь /stop")
 
 def main():
