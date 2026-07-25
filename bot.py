@@ -46,7 +46,7 @@ async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Запущено. Ищем рабочий эндпоинт для номера {phone}...")
 
     async def spam():
-        nonlocal found_endpoint
+        global found_endpoint
         count = 0
         async with aiohttp.ClientSession() as session:
             while True:
