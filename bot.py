@@ -1,7 +1,9 @@
+import os
 import re
 import time
-import requests
 import asyncio
+import requests
+from flask import Flask, request
 import telebot
 from telebot import types
 from telethon import TelegramClient, errors
@@ -107,18 +109,24 @@ def handle_phone(message):
     bot.delete_message(chat_id, message.message_id)
     send_codes_sync(chat_id, state["message_id"], phone)
 
+WEBHOOK_URL = "https://spam-production-64ec.up.railway.app/webhook"
+app = Flask(__name__)
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_str = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+        return '', 200
+    return '', 403
+
 if __name__ == "__main__":
-    for attempt in range(5):
-        try:
-            resp = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook?drop_pending_updates=true")
-            if resp.status_code == 200 and resp.json().get("ok"):
-                print("Webhook deleted successfully")
-                break
-            else:
-                print(f"Delete webhook attempt {attempt+1} failed: {resp.text}")
-        except Exception as e:
-            print(f"Delete webhook error: {e}")
-        time.sleep(2)
+    bot.remove_webhook()
+    resp = requests.get(f"https://api.telegram.org/bot{TOKEN}/setWebhook?url={WEBHOOK_URL}")
+    if resp.status_code != 200:
+        print("Webhook set error:", resp.text)
     else:
-        print("Could not delete webhook, proceeding anyway")
-    bot.polling(none_stop=True, interval=1, timeout=30)
+        print("Webhook set:", resp.json())
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
