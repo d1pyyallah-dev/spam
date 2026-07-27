@@ -17,7 +17,7 @@ ACCOUNTS = [
 user_states = {}
 clients = []
 
-async def on_startup():
+async def init_clients():
     for acc in ACCOUNTS:
         client = TelegramClient(None, acc["api_id"], acc["api_hash"])
         await client.connect()
@@ -67,9 +67,7 @@ async def send_codes(chat_id, msg_id, phone, context):
 
     tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
     results = await asyncio.gather(*tasks)
-    status_lines = results
-    await context.bot.edit_message_text("\n".join(status_lines), chat_id, log_msg.message_id)
-
+    await context.bot.edit_message_text("\n".join(results), chat_id, log_msg.message_id)
     await context.bot.edit_message_text("gotovo tvoia mat viebana", chat_id, msg_id)
     if max_flood > 0:
         task = asyncio.create_task(flood_timer(chat_id, msg_id, max_flood, context))
@@ -107,14 +105,14 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.delete()
     await send_codes(chat_id, state["message_id"], phone, context)
 
-def main():
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(on_startup())
+async def main():
+    await init_clients()
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(spam_callback, pattern="spam"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_phone))
-    app.run_polling()
+    await app.bot.delete_webhook(drop_pending_updates=True)
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
