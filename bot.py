@@ -11,7 +11,6 @@ ACCOUNTS = [
     {"api_id": 39934985, "api_hash": "d0ff8b0d846856b0a01a99379b96e9bd"},
     {"api_id": 7216741, "api_hash": "1e85ff32d1cabb4e6e9537ae2d8218ca"},
     {"api_id": 31360840, "api_hash": "4279cc0d7ab41331200a13bf61152f4a"},
-    {"api_id": 867055023716, "api_hash": "11dafcdc1514796c867055023716d39a"},
     {"api_id": 38299331, "api_hash": "fb5e560c3bda2db7541770b2294ee137"}
 ]
 
