@@ -21,7 +21,7 @@ clients = []
 async def on_startup():
     for acc in ACCOUNTS:
         client = TelegramClient(None, acc["api_id"], acc["api_hash"])
-        await client.start()
+        await client.connect()
         clients.append(client)
 
 def clean_phone(phone):
