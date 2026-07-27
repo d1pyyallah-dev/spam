@@ -42,6 +42,7 @@ def clean_phone(phone):
 
 def send_codes_sync(chat_id, msg_id, phone):
     async def send_codes():
+        print(f"[DEBUG] send_codes called for phone {phone}")
         log_msg = bot.send_message(chat_id, "Отправка начата...")
         max_flood = 0
         results = []
@@ -51,18 +52,23 @@ def send_codes_sync(chat_id, msg_id, phone):
             sent = 0
             for attempt in range(6):
                 try:
+                    print(f"[DEBUG] Акк{idx}: попытка {attempt+1}")
                     await client.send_code_request(phone)
                     sent += 1
+                    print(f"[DEBUG] Акк{idx}: успешно отправлено {sent}")
                 except errors.FloodWaitError as e:
+                    print(f"[DEBUG] Акк{idx}: FloodWait {e.seconds}")
                     if e.seconds > max_flood:
                         max_flood = e.seconds
                     await asyncio.sleep(e.seconds)
-                except Exception:
+                except Exception as e:
+                    print(f"[ERROR] Акк{idx}: {e}")
                     break
             return f"Акк{idx}: {sent}/6"
 
         tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
         results = await asyncio.gather(*tasks)
+        print(f"[DEBUG] Результаты: {results}")
         bot.edit_message_text("\n".join(results), chat_id, log_msg.message_id)
         bot.edit_message_text("gotovo tvoia mat viebana", chat_id, msg_id)
         if max_flood > 0:
@@ -114,8 +120,10 @@ app = Flask(__name__)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
+    print("Webhook called")
     if request.headers.get('content-type') == 'application/json':
         json_str = request.get_data().decode('utf-8')
+        print("Received:", json_str)
         update = telebot.types.Update.de_json(json_str)
         bot.process_new_updates([update])
         return '', 200
