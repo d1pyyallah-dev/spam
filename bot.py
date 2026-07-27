@@ -16,10 +16,6 @@ ACCOUNTS = [
     {"api_id": 38299331, "api_hash": "fb5e560c3bda2db7541770b2294ee137"}
 ]
 
-resp = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
-if resp.status_code != 200:
-    print("Failed to delete webhook", resp.text)
-
 bot = telebot.TeleBot(TOKEN, threaded=False)
 user_states = {}
 clients = []
@@ -112,7 +108,17 @@ def handle_phone(message):
     send_codes_sync(chat_id, state["message_id"], phone)
 
 if __name__ == "__main__":
-    try:
-        bot.polling(none_stop=True, interval=1)
-    except Exception as e:
-        print("Polling error:", e)
+    for attempt in range(5):
+        try:
+            resp = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook?drop_pending_updates=true")
+            if resp.status_code == 200 and resp.json().get("ok"):
+                print("Webhook deleted successfully")
+                break
+            else:
+                print(f"Delete webhook attempt {attempt+1} failed: {resp.text}")
+        except Exception as e:
+            print(f"Delete webhook error: {e}")
+        time.sleep(2)
+    else:
+        print("Could not delete webhook, proceeding anyway")
+    bot.polling(none_stop=True, interval=1, timeout=30)
