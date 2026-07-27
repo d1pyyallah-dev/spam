@@ -105,14 +105,14 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.delete()
     await send_codes(chat_id, state["message_id"], phone, context)
 
-def main():
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(init_clients())
+async def main():
+    await init_clients()
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(spam_callback, pattern="spam"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_phone))
-    app.run_polling()
+    await app.bot.delete_webhook(drop_pending_updates=True)
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
