@@ -52,16 +52,17 @@ async def send_codes(chat_id, msg_id, phone, context):
         nonlocal max_flood
         sent = 0
         for attempt in range(6):
-            try:
-                await client.send_code_request(phone)
-                sent += 1
-            except errors.FloodWaitError as e:
-                if e.seconds > max_flood:
-                    max_flood = e.seconds
-                await asyncio.sleep(e.seconds)
-                sent += 1
-            except Exception:
-                pass
+            while True:
+                try:
+                    await client.send_code_request(phone)
+                    sent += 1
+                    break
+                except errors.FloodWaitError as e:
+                    if e.seconds > max_flood:
+                        max_flood = e.seconds
+                    await asyncio.sleep(e.seconds)
+                except Exception:
+                    break
         return f"Акк{idx}: {sent}/6"
 
     tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
@@ -106,13 +107,14 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.delete()
     await send_codes(chat_id, state["message_id"], phone, context)
 
-def main():
-    asyncio.run(on_startup())
+async def main():
+    await on_startup()
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(spam_callback, pattern="spam"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_phone))
-    app.run_polling()
+    await app.bot.delete_webhook(drop_pending_updates=True)
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
