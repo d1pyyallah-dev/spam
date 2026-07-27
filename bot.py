@@ -5,7 +5,7 @@ from telethon import TelegramClient, errors
 import asyncio
 import requests
 
-TOKEN = "8978420835:AAHBaPWP0IGX4YHw1qawpE7nCoRXaK4Kxc4"
+TOKEN = "8849356420:AAEjpTNzO7-gyehMmtqFd-jH3Mpd9a_Zwh0"
 ACCOUNTS = [
     {"api_id": 33788912, "api_hash": "175c63ac822b43d48b32776ee6b82761"},
     {"api_id": 33590106, "api_hash": "b40ac10586c1d243b6180c7f9a4feff2"},
