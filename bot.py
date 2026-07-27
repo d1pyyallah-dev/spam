@@ -1,8 +1,8 @@
-import asyncio
 import re
 import telebot
 from telebot import types
 from telethon import TelegramClient, errors
+import asyncio
 
 TOKEN = "8978420835:AAHBaPWP0IGX4YHw1qawpE7nCoRXaK4Kxc4"
 ACCOUNTS = [
@@ -14,7 +14,7 @@ ACCOUNTS = [
     {"api_id": 38299331, "api_hash": "fb5e560c3bda2db7541770b2294ee137"}
 ]
 
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TOKEN, threaded=False)
 user_states = {}
 clients = []
 
@@ -67,13 +67,9 @@ def send_codes_sync(chat_id, msg_id, phone):
                 bot.edit_message_text(f"floodwait - {remaining}sekund", chat_id, msg_id)
                 asyncio.sleep(1)
                 remaining -= 1
-            kb = types.InlineKeyboardMarkup()
-            kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
-            bot.edit_message_text("floodwait zakonchen mochesh dalshe spamit", chat_id, msg_id, reply_markup=kb)
-        else:
-            kb = types.InlineKeyboardMarkup()
-            kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
-            bot.edit_message_text("floodwait zakonchen mochesh dalshe spamit", chat_id, msg_id, reply_markup=kb)
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
+        bot.edit_message_text("floodwait zakonchen mochesh dalshe spamit", chat_id, msg_id, reply_markup=kb)
         if chat_id in user_states:
             user_states[chat_id]["timer_task"] = None
 
@@ -85,7 +81,7 @@ def start(message):
     kb = types.InlineKeyboardMarkup()
     kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
     sent = bot.reply_to(message, "privet ueban chtob spamit nashmi vnizu (spam)", reply_markup=kb)
-    user_states[chat_id] = {"message_id": sent.message_id, "timer_task": None, "waiting_phone": False}
+    user_states[chat_id] = {"message_id": sent.message_id, "waiting_phone": False}
 
 @bot.callback_query_handler(func=lambda call: call.data == "spam")
 def spam_callback(call):
@@ -94,8 +90,6 @@ def spam_callback(call):
     if not state:
         bot.answer_callback_query(call.id)
         return
-    if state.get("timer_task"):
-        pass
     bot.edit_message_text("napishi nomer", chat_id, state["message_id"])
     state["waiting_phone"] = True
     bot.answer_callback_query(call.id)
@@ -112,4 +106,5 @@ def handle_phone(message):
     send_codes_sync(chat_id, state["message_id"], phone)
 
 if __name__ == "__main__":
-    bot.polling(none_stop=True)
+    bot.remove_webhook()
+    bot.polling(none_stop=True, interval=0)
