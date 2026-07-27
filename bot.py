@@ -52,17 +52,16 @@ async def send_codes(chat_id, msg_id, phone, context):
         nonlocal max_flood
         sent = 0
         for attempt in range(6):
-            while True:
-                try:
-                    await client.send_code_request(phone)
-                    sent += 1
-                    break
-                except errors.FloodWaitError as e:
-                    if e.seconds > max_flood:
-                        max_flood = e.seconds
-                    await asyncio.sleep(e.seconds)
-                except Exception:
-                    break
+            try:
+                await client.send_code_request(phone)
+                sent += 1
+            except errors.FloodWaitError as e:
+                if e.seconds > max_flood:
+                    max_flood = e.seconds
+                await asyncio.sleep(e.seconds)
+                sent += 1
+            except Exception:
+                pass
         return f"Акк{idx}: {sent}/6"
 
     tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
@@ -108,8 +107,7 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_codes(chat_id, state["message_id"], phone, context)
 
 def main():
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(on_startup())
+    asyncio.run(on_startup())
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(spam_callback, pattern="spam"))
