@@ -44,25 +44,32 @@ async def flood_timer(chat_id, msg_id, seconds, context):
     await finish_flood(chat_id, msg_id, context)
 
 async def send_codes(chat_id, msg_id, phone, context):
+    log_msg = await context.bot.send_message(chat_id, "Отправка начата...")
     max_flood = 0
-    status_msg = await context.bot.send_message(chat_id, "Начинаю отправку...")
-    log_lines = []
-    async def send_for_client(client, idx):
+    status_lines = []
+
+    async def send_one_client(client, idx):
         nonlocal max_flood
-        try:
-            tasks = [client.send_code_request(phone) for _ in range(6)]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            ok = sum(1 for r in results if not isinstance(r, Exception))
-            flood_errors = [r for r in results if isinstance(r, errors.FloodWaitError)]
-            if flood_errors:
-                max_flood = max(max_flood, max(e.seconds for e in flood_errors))
-            return f"Акк{idx}: {ok}/6"
-        except Exception as e:
-            return f"Акк{idx}: ошибка {type(e).__name__}"
-    tasks = [send_for_client(client, i+1) for i, client in enumerate(clients)]
+        sent = 0
+        for attempt in range(6):
+            while True:
+                try:
+                    await client.send_code_request(phone)
+                    sent += 1
+                    break
+                except errors.FloodWaitError as e:
+                    if e.seconds > max_flood:
+                        max_flood = e.seconds
+                    await asyncio.sleep(e.seconds)
+                except Exception:
+                    break
+        return f"Акк{idx}: {sent}/6"
+
+    tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
     results = await asyncio.gather(*tasks)
-    log_lines.extend(results)
-    await context.bot.edit_message_text("\n".join(log_lines), chat_id, status_msg.message_id)
+    status_lines = results
+    await context.bot.edit_message_text("\n".join(status_lines), chat_id, log_msg.message_id)
+
     await context.bot.edit_message_text("gotovo tvoia mat viebana", chat_id, msg_id)
     if max_flood > 0:
         task = asyncio.create_task(flood_timer(chat_id, msg_id, max_flood, context))
